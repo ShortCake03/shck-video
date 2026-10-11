@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import { db, schema } from '~/server/utils/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq, and, sql } from 'drizzle-orm'
-import { getUserFromEvent } from '~/server/utils/auth'
+import { getUserFromEvent } from '~~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const idOrCustomId = getRouterParam(event, 'id') || ''
@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   if (!idOrCustomId) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Identifiant vidéo manquant.'
+      message: 'Identifiant vidéo manquant.'
     })
   }
 
@@ -51,12 +51,12 @@ export default defineEventHandler(async (event) => {
   if (!videoList.length) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Vidéo introuvable.'
+      message: 'Vidéo introuvable.'
     })
   }
 
-  const targetVideo = videoList[0].video
-  const videoUser = videoList[0].user
+  const targetVideo = videoList[0]!.video
+  const videoUser = videoList[0]!.user
 
   // Incrémenter le nombre de vues
   await db.update(schema.videos)
@@ -80,7 +80,7 @@ export default defineEventHandler(async (event) => {
       .where(and(eq(schema.likes.videoId, targetVideo.id), eq(schema.likes.userId, currentUser.id)))
       .limit(1)
     if (userLikeCheck.length > 0) {
-      userLikeStatus = userLikeCheck[0].isLike
+      userLikeStatus = userLikeCheck[0]!.isLike
     }
   }
 

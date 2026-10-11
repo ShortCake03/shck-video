@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import { db, schema } from '~/server/utils/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq, and, sql } from 'drizzle-orm'
-import { getUserFromEvent } from '~/server/utils/auth'
+import { getUserFromEvent } from '~~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const paramId = getRouterParam(event, 'id')
@@ -10,7 +10,7 @@ export default defineEventHandler(async (event) => {
   if (!targetUserId || isNaN(targetUserId)) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'ID utilisateur invalide.'
+      message: 'ID utilisateur invalide.'
     })
   }
 
@@ -30,11 +30,11 @@ export default defineEventHandler(async (event) => {
   if (!usersList.length) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Chaîne introuvable.'
+      message: 'Chaîne introuvable.'
     })
   }
 
-  const channelUser = usersList[0]
+  const channelUser = usersList[0]!
 
   // Compte des abonnés
   const followersResult = await db.select({ count: sql<number>`count(*)` })
@@ -75,7 +75,7 @@ export default defineEventHandler(async (event) => {
       ))
       .limit(1)
     if (userRatingCheck.length > 0) {
-      userRating = userRatingCheck[0].stars
+      userRating = userRatingCheck[0]!.stars
     }
   }
 

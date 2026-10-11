@@ -1,42 +1,66 @@
 import { defineEventHandler, readBody, createError } from 'h3'
-import { db, schema } from '~/server/utils/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq } from 'drizzle-orm'
-import { hashPassword, signToken, generateNanoId } from '~/server/utils/auth'
+import { hashPassword, signToken, generateEmailVerificationToken, hashEmailVerificationToken, setSessionCookie } from '~~/server/utils/auth'
+import { getVerificationTokenExpiry, sendVerificationEmail } from '~~/server/utils/email'
+import { enforceRateLimit } from '~~/server/utils/rate-limit'
 
 export default defineEventHandler(async (event) => {
+  enforceRateLimit(event, { name: 'auth:register', limit: 5, windowMs: 60 * 60 * 1000 })
+
   const body = await readBody(event)
   const { email, username, password } = body || {}
+  const normalizedEmail = typeof email === 'string' ? email.trim().toLowerCase() : ''
+  const normalizedUsername = typeof username === 'string' ? username.trim() : ''
 
-  if (!email || !username || !password) {
+  if (!normalizedEmail || !normalizedUsername || typeof password !== 'string') {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Veuillez remplir tous les champs obligatoires.'
+      message: 'Veuillez remplir tous les champs obligatoires.'
     })
   }
 
+  if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) {
+    throw createError({ statusCode: 400, message: 'Adresse email invalide.' })
+  }
+
+  if (normalizedUsername.length < 3 || normalizedUsername.length > 32) {
+    throw createError({ statusCode: 400, message: 'Le nom d’utilisateur doit contenir entre 3 et 32 caractères.' })
+  }
+
+  if (password.length < 8) {
+    throw createError({ statusCode: 400, message: 'Le mot de passe doit contenir au moins 8 caractères.' })
+  }
+
   // Vérification si email existe
-  const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1)
+  const existingUser = await db.select().from(schema.users).where(eq(schema.users.email, normalizedEmail)).limit(1)
   if (existingUser.length > 0) {
     throw createError({
-      statusCode: 400,
-      statusMessage: 'Cet email est déjà utilisé.'
+      statusCode: 409,
+      message: 'Cet email est déjà utilisé.'
     })
   }
 
   const hashedPassword = await hashPassword(password)
-  const verificationToken = generateNanoId(16)
+  const rawVerificationToken = generateEmailVerificationToken()
 
   const [newUser] = await db.insert(schema.users).values({
-    email,
-    username,
+    email: normalizedEmail,
+    username: normalizedUsername,
     password: hashedPassword,
     isVerified: false,
-    verificationToken
+    verificationToken: hashEmailVerificationToken(rawVerificationToken),
+    verificationTokenExpiresAt: getVerificationTokenExpiry()
   }).returning()
+  if (!newUser) throw createError({ statusCode: 500, message: 'Impossible de créer le compte.' })
 
-  const token = signToken({ userId: newUser.id, email: newUser.email })
+  const developmentVerificationUrl = await sendVerificationEmail(newUser.email, rawVerificationToken)
+
+  const token = signToken(event, { userId: newUser.id, email: newUser.email })
+  setSessionCookie(event, token)
 
   return {
+    success: true,
     user: {
       id: newUser.id,
       email: newUser.email,
@@ -46,7 +70,7 @@ export default defineEventHandler(async (event) => {
       isVerified: newUser.isVerified,
       birthdate: newUser.birthdate
     },
-    token,
-    message: 'Compte créé avec succès.'
+    message: 'Compte créé avec succès.',
+    developmentVerificationUrl: developmentVerificationUrl || undefined
   }
 })

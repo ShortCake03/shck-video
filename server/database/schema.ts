@@ -9,6 +9,7 @@ export const users = sqliteTable('users', {
   bio: text('bio'),
   isVerified: integer('is_verified', { mode: 'boolean' }).notNull().default(false),
   verificationToken: text('verification_token'),
+  verificationTokenExpiresAt: text('verification_token_expires_at'),
   birthdate: text('birthdate'),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
 })
@@ -45,18 +46,18 @@ export const likes = sqliteTable('likes', {
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   isLike: integer('is_like', { mode: 'boolean' }).notNull(),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
-}, (table) => ({
-  uniqueLike: unique().on(table.videoId, table.userId)
-}))
+}, (table) => [
+  unique().on(table.videoId, table.userId)
+])
 
 export const follows = sqliteTable('follows', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   followerId: integer('follower_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   followingId: integer('following_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
-}, (table) => ({
-  uniqueFollow: unique().on(table.followerId, table.followingId)
-}))
+}, (table) => [
+  unique().on(table.followerId, table.followingId)
+])
 
 export const ratings = sqliteTable('ratings', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -64,9 +65,9 @@ export const ratings = sqliteTable('ratings', {
   targetUserId: integer('target_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   createdAt: text('created_at').notNull().$defaultFn(() => new Date().toISOString())
-}, (table) => ({
-  uniqueRating: unique().on(table.targetUserId, table.userId)
-}))
+}, (table) => [
+  unique().on(table.targetUserId, table.userId)
+])
 
 export const notifications = sqliteTable('notifications', {
   id: integer('id').primaryKey({ autoIncrement: true }),

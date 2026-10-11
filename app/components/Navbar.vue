@@ -1,110 +1,167 @@
 <template>
-  <nav class="navbar">
+  <nav class="sticky top-0 z-[200] flex items-center justify-between border-b border-[#e2e8f0] bg-white px-[30px] py-[14px] shadow-[0_2px_8px_rgba(0,0,0,0.04)] [transform:translateZ(0)] [backface-visibility:hidden] max-[768px]:flex-wrap max-[768px]:gap-2.5 max-[768px]:px-4 max-[768px]:py-3">
     <!-- Logo (Dynamique selon le mode +18) -->
-    <NuxtLink v-if="is18PlusRoute" to="/18plus" class="logo" style="color: #ffffff;">
-      SHCK<span style="color: #dc2626; font-weight: 900;">Video +18</span>
+    <NuxtLink v-if="is18PlusRoute" to="/18plus" class="text-2xl font-black tracking-[-0.5px] text-white no-underline">
+      SHCK<span class="font-black text-[#dc2626]">Video +18</span>
     </NuxtLink>
-    <NuxtLink v-else to="/" class="logo">
-      SHCK<span style="color:var(--neon-pink)">Video</span>
+    <NuxtLink v-else to="/" class="text-2xl font-black tracking-[-0.5px] text-[#1a1a1a] no-underline">
+      SHCK<span class="text-[#ff1493]">Video</span>
     </NuxtLink>
 
     <!-- Barre de Recherche Unifiée (Présente uniquement sur l'accueil et la recherche) -->
     <form 
       v-if="showSearchBar" 
       @submit.prevent="performSearch" 
-      style="flex: 1; max-width: 450px; margin: 0 20px; display: flex; align-items: center; background: #f1f5f9; border-radius: 20px; padding: 4px 14px; border: 1px solid #cbd5e1;"
+      class="mx-5 flex max-w-[450px] flex-1 items-center rounded-[20px] border border-[#cbd5e1] bg-[#f1f5f9] px-[14px] py-1"
     >
       <input 
         type="text" 
         v-model="searchQuery"
         @input="onSearchInput"
         placeholder="Rechercher des vidéos, chaînes, créateurs..." 
-        style="border: none; background: transparent; outline: none; width: 100%; font-size: 14px; color: #111;"
+        class="w-full border-0 bg-transparent text-sm text-[#111] outline-none"
       />
-      <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 16px; padding-left: 8px;">
+      <button type="submit" class="cursor-pointer border-0 bg-transparent pl-2 text-base">
         🔍
       </button>
     </form>
-    <div v-else style="flex: 1;"></div>
+    <div v-else class="flex-1"></div>
 
-    <!-- Actions Utilisateur & Cloche de Notifications Persistante -->
-    <div class="links" style="display: flex; align-items: center; gap: 15px;">
-      <template v-if="token">
-        
-        <!-- CLOCHE DE NOTIFICATIONS GLOBALE PERSISTANTE -->
-        <div style="position: relative;">
-          <button @click="showNotifs = !showNotifs" style="background: none; border: none; cursor: pointer; font-size: 18px; position: relative;">
-            🔔
-            <span v-if="unreadCount > 0" style="position: absolute; top: -5px; right: -5px; background: var(--neon-pink); color: white; font-size: 10px; font-weight: bold; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-              {{ unreadCount }}
+    <!-- Actions utilisateur -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <template v-if="isAuthenticated">
+        <NuxtLink
+          v-if="is18PlusRoute"
+          to="/"
+          class="hidden items-center rounded-lg border border-[#dc2626] px-3 py-2 text-xs font-bold text-[#dc2626] no-underline transition hover:bg-[#dc2626] hover:text-white sm:inline-flex"
+        >
+          Retour classique
+        </NuxtLink>
+
+        <!-- Notifications -->
+        <div class="relative">
+          <button
+            type="button"
+            :aria-expanded="showNotifs"
+            aria-label="Afficher les notifications"
+            @click="toggleNotifications"
+            class="relative inline-flex size-10 cursor-pointer items-center justify-center rounded-xl border border-[#e2e8f0] bg-white text-[#475569] shadow-sm transition hover:border-[#c4b5fd] hover:bg-[#f5f3ff] hover:text-[#7c3aed] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+          >
+            <svg aria-hidden="true" viewBox="0 0 24 24" class="size-5 fill-none stroke-current stroke-[1.8]">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a3 3 0 0 1-5.714 0M18 9a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9Z" />
+            </svg>
+            <span v-if="unreadCount > 0" class="absolute -right-1 -top-1 flex min-w-4 size-4 items-center justify-center rounded-full bg-[#ff1493] px-1 text-[10px] font-bold text-white ring-2 ring-white">
+              {{ unreadCount > 9 ? '9+' : unreadCount }}
             </span>
           </button>
 
           <!-- Dropdown Panneau Notifications -->
-          <div v-if="showNotifs" style="position: absolute; right: 0; top: 35px; width: 310px; background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px rgba(0,0,0,0.12); z-index: 1000; padding: 12px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee;">
-              <strong style="font-size: 13px;">Notifications</strong>
-              <button @click="markNotifsRead" style="background: none; border: none; color: var(--neon-purple); font-size: 11px; cursor: pointer; font-weight: bold;">Tout lire</button>
+          <div v-if="showNotifs" class="absolute top-[35px] right-0 z-[1000] w-[310px] rounded-xl border border-[#e2e8f0] bg-white p-3 shadow-[0_10px_25px_rgba(0,0,0,0.12)]">
+            <div class="mb-2 flex items-center justify-between border-b border-[#eee] pb-1.5">
+              <strong class="text-[13px]">Notifications</strong>
+              <button @click="markNotifsRead" class="cursor-pointer border-0 bg-transparent text-[11px] font-bold text-[#8a2be2]">Tout lire</button>
             </div>
             
-            <div v-if="notifications.length === 0" style="font-size: 12px; color: #888; text-align: center; padding: 15px;">
+            <div v-if="notifications.length === 0" class="p-[15px] text-center text-xs text-[#888]">
               Aucune notification.
             </div>
             
-            <div v-else style="max-height: 260px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px;">
+            <div v-else class="flex max-h-[260px] flex-col gap-1.5 overflow-y-auto">
               <div 
                 v-for="n in notifications" 
                 :key="n.id" 
                 @click="handleNotifClick(n)"
-                style="font-size: 12px; padding: 8px; border-radius: 6px; cursor: pointer; transition: background 0.15s;"
-                :style="{ background: n.read ? '#f8f9fa' : '#f0f4ff', borderLeft: n.read ? 'none' : '3px solid var(--neon-purple)' }"
+                class="cursor-pointer rounded-md p-2 text-xs transition-[background] duration-150"
+                :class="n.read ? 'bg-[#f8f9fa]' : 'border-l-[3px] border-l-[#8a2be2] bg-[#f0f4ff]'"
               >
-                <div style="color: #222; font-weight: 500;">{{ n.message }}</div>
-                <span style="font-size: 10px; color: #888; margin-top: 4px; display: block;">{{ formatDate(n.createdAt) }}</span>
+                <div class="font-medium text-[#222]">{{ n.message }}</div>
+                <span class="mt-1 block text-[10px] text-[#888]">{{ formatDate(n.createdAt) }}</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Badge de Vérification d'Email (Mode Restreint) -->
-        <button 
-          v-if="!user?.isVerified" 
-          @click="handleVerifyEmail" 
-          title="Cliquez pour vérifier votre adresse email et débloquer les commentaires et uploads"
-          style="background: #fffbeb; color: #b45309; border: 1px solid #f59e0b; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px;"
+        <!-- Upload -->
+        <NuxtLink
+          to="/upload"
+          class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-[#8a2be2] to-[#ff1493] px-3.5 py-2.5 text-sm font-bold text-white no-underline shadow-[0_5px_14px_rgba(138,43,226,0.24)] transition hover:-translate-y-px hover:shadow-[0_8px_18px_rgba(138,43,226,0.32)] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
         >
-          <span>⚠️</span> Email non vérifié (Vérifier)
-        </button>
-
-        <!-- Option de Retour au Mode Classique (Present uniquement sur /18plus) -->
-        <NuxtLink 
-          v-if="is18PlusRoute" 
-          to="/" 
-          class="neon-btn neon-btn-crimson" 
-          style="text-decoration: none; padding: 6px 12px; font-size: 12px; font-weight: bold;"
-        >
-          ⬅️ Retour Classique
+          <svg aria-hidden="true" viewBox="0 0 24 24" class="size-4 fill-none stroke-current stroke-[2]">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 16V4m0 0L8 8m4-4 4 4M5 14v4a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-4" />
+          </svg>
+          <span class="hidden sm:inline">Upload</span>
         </NuxtLink>
 
-        <!-- Badge Utilisateur (Mon Profil) -->
-        <NuxtLink to="/channel" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: #111; font-weight: 600; font-size: 14px;">
-          <img :src="user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username}`" loading="lazy" decoding="async" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover;" />
-          <span>{{ user?.username }}</span>
-        </NuxtLink>
+        <!-- Profil : hover, focus clavier ou clic -->
+        <div
+          class="relative"
+          @mouseenter="profileMenuOpen = true"
+          @mouseleave="profileMenuOpen = false"
+          @focusin="profileMenuOpen = true"
+          @focusout="closeProfileMenu"
+          @keydown.esc="profileMenuOpen = false"
+        >
+          <button
+            type="button"
+            :aria-expanded="profileMenuOpen"
+            aria-haspopup="menu"
+            aria-label="Ouvrir le menu du profil"
+            @click="profileMenuOpen = !profileMenuOpen"
+            class="group inline-flex cursor-pointer items-center gap-2 rounded-xl border border-transparent bg-transparent p-1.5 text-left transition hover:border-[#e2e8f0] hover:bg-[#f8fafc] focus:outline-none focus:ring-2 focus:ring-[#c4b5fd]"
+          >
+            <img :src="user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username}`" loading="lazy" decoding="async" class="size-8 rounded-lg object-cover ring-1 ring-[#e2e8f0]" />
+            <span class="hidden max-w-28 truncate text-sm font-bold text-[#1e293b] lg:block">{{ user?.username }}</span>
+            <svg aria-hidden="true" viewBox="0 0 20 20" class="hidden size-4 fill-none stroke-[#64748b] stroke-2 transition group-hover:stroke-[#7c3aed] sm:block" :class="{ 'rotate-180': profileMenuOpen }">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m5 7.5 5 5 5-5" />
+            </svg>
+          </button>
 
-        <!-- Actions -->
-        <NuxtLink to="/upload" class="neon-btn">Upload</NuxtLink>
-        <button @click="logout" class="neon-btn neon-btn-pink">Déconnexion</button>
+          <div
+            v-if="profileMenuOpen"
+            class="absolute right-0 top-full z-[1000] w-64 pt-2"
+          >
+            <div role="menu" class="origin-top-right overflow-hidden rounded-2xl border border-[#e2e8f0] bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.16)]">
+              <NuxtLink to="/channel" role="menuitem" @click="profileMenuOpen = false" class="mb-2 flex items-center gap-3 rounded-xl bg-[#f8fafc] p-3 text-[#0f172a] no-underline transition hover:bg-[#f5f3ff]">
+                <img :src="user?.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${user?.username}`" loading="lazy" decoding="async" class="size-10 rounded-xl object-cover" />
+                <span class="min-w-0">
+                  <strong class="block truncate text-sm">{{ user?.username }}</strong>
+                  <span class="block truncate text-xs text-[#64748b]">Voir mon profil</span>
+                </span>
+              </NuxtLink>
+
+              <NuxtLink to="/channel" role="menuitem" @click="profileMenuOpen = false" class="block rounded-xl px-3 py-2 text-sm font-semibold text-[#334155] no-underline transition hover:bg-[#f5f3ff] hover:text-[#7c3aed]">Ma chaîne</NuxtLink>
+              <NuxtLink to="/dashboard/videos" role="menuitem" @click="profileMenuOpen = false" class="block rounded-xl px-3 py-2 text-sm font-semibold text-[#334155] no-underline transition hover:bg-[#f5f3ff] hover:text-[#7c3aed]">Mes vidéos</NuxtLink>
+              <NuxtLink to="/my-comments" role="menuitem" @click="profileMenuOpen = false" class="block rounded-xl px-3 py-2 text-sm font-semibold text-[#334155] no-underline transition hover:bg-[#f5f3ff] hover:text-[#7c3aed]">Mes commentaires</NuxtLink>
+              <NuxtLink to="/settings" role="menuitem" @click="profileMenuOpen = false" class="block rounded-xl px-3 py-2 text-sm font-semibold text-[#334155] no-underline transition hover:bg-[#f5f3ff] hover:text-[#7c3aed]">Paramètres</NuxtLink>
+
+              <button
+                v-if="!user?.isVerified"
+                type="button"
+                role="menuitem"
+                @click="handleVerifyEmail"
+                class="mt-1 w-full cursor-pointer rounded-lg border border-[#fde68a] bg-[#fffbeb] px-3 py-2 text-left text-xs font-semibold text-[#b45309]"
+              >
+                Vérifier mon e-mail
+              </button>
+
+              <div class="my-2 border-t border-[#e2e8f0]"></div>
+              <button type="button" role="menuitem" @click="logout" class="flex w-full cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 text-sm font-bold text-[#e11d48] transition hover:bg-[#fff1f2]">
+                Déconnexion
+                <span aria-hidden="true">→</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </template>
 
       <template v-else>
-        <NuxtLink to="/login" class="neon-btn neon-btn-pink">Connexion</NuxtLink>
+        <NuxtLink to="/login" class="inline-flex cursor-pointer items-center justify-center rounded-lg border-2 border-[#ff1493] bg-transparent px-5 py-2.5 text-sm font-semibold text-[#ff1493] no-underline shadow-[0_0_4px_rgba(255,20,147,0.2)] transition-[background-color,box-shadow,color] duration-[180ms] ease-[ease] [transform:translateZ(0)] [backface-visibility:hidden] [will-change:background-color,box-shadow,color] hover:bg-[#ff1493] hover:text-white hover:shadow-[0_4px_12px_rgba(255,20,147,0.3)]">Connexion</NuxtLink>
       </template>
     </div>
   </nav>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '~/composables/useAuth'
@@ -112,8 +169,20 @@ import { useNotifications } from '~/composables/useNotifications'
 
 const route = useRoute()
 const router = useRouter()
-const { token, user, logout, verifyEmail } = useAuth()
+const { isAuthenticated, user, logout, requestEmailVerification } = useAuth()
 const { notifications, unreadCount, showNotifs, fetchNotifications, markNotifsRead, handleNotifClick, startPolling, stopPolling } = useNotifications()
+const profileMenuOpen = ref(false)
+
+const toggleNotifications = () => {
+  profileMenuOpen.value = false
+  showNotifs.value = !showNotifs.value
+}
+
+const closeProfileMenu = (event: FocusEvent) => {
+  const menu = event.currentTarget as HTMLElement | null
+  const nextElement = event.relatedTarget as Node | null
+  if (!menu?.contains(nextElement)) profileMenuOpen.value = false
+}
 
 const is18PlusRoute = computed(() => {
   return route.path === '/18plus'
@@ -131,11 +200,13 @@ const isAdult = computed(() => {
 })
 
 const handleVerifyEmail = async () => {
-  const success = await verifyEmail()
-  if (success) {
-    alert("Votre adresse email a été vérifiée avec succès ! Les fonctionnalités d'upload et de commentaires sont débloquées.")
+  const result = await requestEmailVerification()
+  if (result?.developmentVerificationUrl && import.meta.client) {
+    window.location.assign(result.developmentVerificationUrl)
+  } else if (result?.success) {
+    alert("Un lien de vérification vient d'être envoyé à votre adresse e-mail.")
   } else {
-    alert("Erreur lors de la vérification de l'email.")
+    alert("Impossible d'envoyer le lien de vérification.")
   }
 }
 
@@ -146,7 +217,7 @@ const showSearchBar = computed(() => {
 })
 
 // Debounced search — prevents API spam on every keystroke (300ms delay)
-let searchDebounceTimer = null
+let searchDebounceTimer: ReturnType<typeof setTimeout> | undefined
 const onSearchInput = () => {
   if (searchDebounceTimer) clearTimeout(searchDebounceTimer)
   searchDebounceTimer = setTimeout(() => {
@@ -174,10 +245,11 @@ onUnmounted(() => {
 
 watch(() => route.path, () => {
   showNotifs.value = false
+  profileMenuOpen.value = false
   fetchNotifications()
 })
 
-const formatDate = (dateStr) => {
+const formatDate = (dateStr: string) => {
   if (!dateStr) return ''
   return new Date(dateStr).toLocaleDateString('fr-FR', {
     day: 'numeric',

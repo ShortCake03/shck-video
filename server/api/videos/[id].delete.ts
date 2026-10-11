@@ -1,7 +1,7 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import { db, schema } from '~/server/utils/db'
+import { db, schema } from '~~/server/utils/db'
 import { eq, or } from 'drizzle-orm'
-import { requireAuthUser } from '~/server/utils/auth'
+import { requireAuthUser } from '~~/server/utils/auth'
 import fs from 'fs'
 import path from 'path'
 
@@ -20,16 +20,16 @@ export default defineEventHandler(async (event) => {
   if (!videoCheck.length) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Vidéo introuvable.'
+      message: 'Vidéo introuvable.'
     })
   }
 
-  const video = videoCheck[0]
+  const video = videoCheck[0]!
 
   if (video.userId !== currentUser.id) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Vous n\'êtes pas autorisé à supprimer cette vidéo.'
+      message: 'Vous n\'êtes pas autorisé à supprimer cette vidéo.'
     })
   }
 

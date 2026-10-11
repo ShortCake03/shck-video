@@ -1,6 +1,6 @@
 import { defineEventHandler, createError, getRouterParam } from 'h3'
-import { db, schema } from '~/server/utils/db'
-import { eq, or, isNull, asc } from 'drizzle-orm'
+import { db, schema } from '~~/server/utils/db'
+import { eq, or, isNull, asc, and, sql } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const idOrCustomId = getRouterParam(event, 'id') || ''
@@ -16,11 +16,11 @@ export default defineEventHandler(async (event) => {
   if (!videoCheck.length) {
     throw createError({
       statusCode: 404,
-      statusMessage: 'Vidéo introuvable.'
+      message: 'Vidéo introuvable.'
     })
   }
 
-  const targetVideo = videoCheck[0]
+  const targetVideo = videoCheck[0]!
 
   // Commentaires parents
   const topComments = await db.select({

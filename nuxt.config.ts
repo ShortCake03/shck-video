@@ -1,19 +1,42 @@
+import tailwindcss from '@tailwindcss/vite'
+
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2026-07-22',
-  future: {
-    compatibilityVersion: 4,
-  },
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
+
+  runtimeConfig: {
+    // Private server-only setting. At runtime, prefer NUXT_JWT_SECRET.
+    jwtSecret: process.env.NUXT_JWT_SECRET || process.env.JWT_SECRET || '',
+    email: {
+      smtpHost: process.env.SMTP_HOST || '',
+      smtpPort: process.env.SMTP_PORT || '587',
+      smtpUser: process.env.SMTP_USER || '',
+      smtpPassword: process.env.SMTP_PASSWORD || '',
+      from: process.env.MAIL_FROM || '',
+      appUrl: process.env.APP_URL || 'http://localhost:3000'
+    }
+  },
+
+  // Nuxt 4.5's dev-only page diagnostic is misclassified as lacking a default
+  // export by Nuxt's own plugin scanner. It is not needed at runtime.
+  hooks: {
+    'app:resolve': (app) => {
+      app.plugins = app.plugins.filter(
+        plugin => !plugin.src.includes('/pages/runtime/plugins/check-if-page-unused')
+      )
+    }
+  },
 
   nitro: {
     compressPublicAssets: true
   },
 
   vite: {
+    plugins: [tailwindcss()],
     build: {
-      target: 'es2018',
+      target: 'es2020',
       cssMinify: true,
       minify: 'esbuild'
     }

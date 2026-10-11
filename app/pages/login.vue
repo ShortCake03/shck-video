@@ -1,31 +1,33 @@
 <template>
-  <div style="padding: 30px; text-align: center;">
-    <h2 style="color: var(--neon-purple);">Connexion</h2>
-    <form @submit.prevent="login" style="max-width: 400px; margin: 0 auto; display: flex; flex-direction: column; gap: 15px;">
-      <input type="email" placeholder="Email" required v-model="email" style="padding: 10px; border-radius: 5px; border: 1px solid var(--neon-purple); background: white; color: black;" />
-      <input type="password" placeholder="Mot de passe" required v-model="password" style="padding: 10px; border-radius: 5px; border: 1px solid var(--neon-purple); background: white; color: black;" />
-      <button type="submit" class="neon-btn" :disabled="loading">
+  <div class="p-8 text-center">
+    <h2 class="text-brand">Connexion</h2>
+    <form @submit.prevent="login" class="mx-auto flex max-w-sm flex-col gap-4">
+      <input type="email" placeholder="Email" required v-model="email" class="rounded-md border border-brand bg-white p-2.5 text-black" />
+      <input type="password" placeholder="Mot de passe" required v-model="password" class="rounded-md border border-brand bg-white p-2.5 text-black" />
+      <button type="submit" class="rounded-md bg-brand px-4 py-2 font-semibold text-white transition hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-60" :disabled="loading">
         {{ loading ? 'Connexion...' : 'Se connecter' }}
       </button>
     </form>
-    <p v-if="errorMsg" style="color: red; margin-top: 15px;">{{ errorMsg }}</p>
-    <p style="margin-top: 20px;">
-      Pas encore de compte ? <NuxtLink to="/register" style="color: var(--neon-pink);">S'inscrire</NuxtLink>
+    <p v-if="errorMsg" class="mt-4 text-red-600">{{ errorMsg }}</p>
+    <p class="mt-5">
+      Pas encore de compte ? <NuxtLink to="/register" class="text-accent">S'inscrire</NuxtLink>
     </p>
-    <p style="margin-top: 10px;"><NuxtLink to="/" style="color: var(--text-muted);">Retour à l'accueil</NuxtLink></p>
+    <p class="mt-2.5"><NuxtLink to="/" class="text-muted">Retour à l'accueil</NuxtLink></p>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useAuth } from '~/composables/useAuth'
+import type { AuthUser } from '#shared/types/models'
 
 const email = ref('')
 const password = ref('')
 const errorMsg = ref('')
 const loading = ref(false)
 const router = useRouter()
+const route = useRoute()
 const { setAuth } = useAuth()
 
 const login = async () => {
@@ -33,17 +35,26 @@ const login = async () => {
   errorMsg.value = ''
   
   try {
-    const res = await $fetch('/api/auth/login', {
+    const res = await $fetch<{ success: boolean, user?: AuthUser, message?: string }>('/api/auth/login', {
       method: 'POST',
       body: { email: email.value, password: password.value }
     })
     
-    if (res.success) {
-      setAuth(res.token, res.user)
-      router.push('/')
+    if (!res?.success || !res.user) {
+      errorMsg.value = res?.message || 'La connexion a échoué. Réessayez.'
+      return
     }
-  } catch (err) {
-    errorMsg.value = err.data?.error || 'Identifiants incorrects.'
+
+    if (res.success) {
+      setAuth(res.user)
+      const redirect = typeof route.query.redirect === 'string' && route.query.redirect.startsWith('/') && !route.query.redirect.startsWith('//')
+        ? route.query.redirect
+        : '/'
+      router.push(redirect)
+    }
+  } catch (error: unknown) {
+    const serverMessage = (error as { data?: { message?: string } })?.data?.message
+    errorMsg.value = serverMessage || 'Un problème est survenu. Réessayez dans un instant.'
   } finally {
     loading.value = false
   }

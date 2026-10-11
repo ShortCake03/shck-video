@@ -1,7 +1,7 @@
-import { defineEventHandler, readBody } from 'h3'
-import { db, schema } from '~/server/utils/db'
+import { defineEventHandler, readBody, createError } from 'h3'
+import { db, schema } from '~~/server/utils/db'
 import { eq } from 'drizzle-orm'
-import { requireAuthUser } from '~/server/utils/auth'
+import { requireAuthUser } from '~~/server/utils/auth'
 
 export default defineEventHandler(async (event) => {
   const currentUser = await requireAuthUser(event)
@@ -17,6 +17,7 @@ export default defineEventHandler(async (event) => {
     })
     .where(eq(schema.users.id, currentUser.id))
     .returning()
+  if (!updatedUser) throw createError({ statusCode: 404, message: 'Utilisateur introuvable.' })
 
   return {
     message: 'Profil mis à jour avec succès.',

@@ -1,8 +1,8 @@
 <template>
-  <div style="padding: 40px; text-align: center;">Redirection...</div>
+  <div class="p-10 text-center">Redirection...</div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 

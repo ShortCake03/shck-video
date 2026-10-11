@@ -1,72 +1,62 @@
 import { useState } from '#app'
+import type { AuthUser } from '#shared/types/models'
 
 export const useAuth = () => {
-  const token = useState('auth_token', () => null)
-  const user = useState('auth_user', () => null)
+  const user = useState<AuthUser | null>('auth_user', () => null)
+  const isAuthenticated = useState<boolean>('auth_is_authenticated', () => false)
 
-  const setAuth = (newToken, newUser) => {
-    token.value = newToken
+  const setAuth = (newUser: AuthUser) => {
+    isAuthenticated.value = true
     user.value = newUser
-    if (process.client) {
-      localStorage.setItem('auth_token', newToken)
-      localStorage.setItem('auth_user', JSON.stringify(newUser))
-    }
   }
 
-  const logout = () => {
-    token.value = null
+  const clearAuth = () => {
+    isAuthenticated.value = false
     user.value = null
-    if (process.client) {
-      localStorage.removeItem('auth_token')
-      localStorage.removeItem('auth_user')
-    }
   }
 
-  const loadAuth = () => {
-    if (process.client) {
-      const storedToken = localStorage.getItem('auth_token')
-      const storedUser = localStorage.getItem('auth_user')
-      if (storedToken && storedUser) {
-        token.value = storedToken
-        user.value = JSON.parse(storedUser)
-      }
-    }
-  }
-
-  const setUser = (newUser) => {
-    user.value = newUser
-    if (process.client) {
-      localStorage.setItem('auth_user', JSON.stringify(newUser))
-    }
-  }
-
-  const verifyEmail = async () => {
-    if (!token.value) return false
+  const logout = async () => {
     try {
-      const res = await $fetch('/api/auth/verify-email', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token.value}` }
-      })
-      if (res.user) {
-        setUser({ ...user.value, ...res.user })
-      } else {
-        setUser({ ...user.value, isVerified: true })
-      }
+      await $fetch('/api/auth/logout', { method: 'POST' })
+    } finally {
+      clearAuth()
+    }
+  }
+
+  const loadAuth = async (): Promise<boolean> => {
+    try {
+      const currentUser = await $fetch<AuthUser>('/api/users/me')
+      setAuth(currentUser)
       return true
-    } catch (err) {
-      console.error(err)
+    } catch {
+      clearAuth()
       return false
     }
   }
 
+  const setUser = (newUser: AuthUser) => {
+    user.value = newUser
+  }
+
+  const requestEmailVerification = async (): Promise<{ success: boolean, developmentVerificationUrl?: string } | null> => {
+    if (!isAuthenticated.value) return null
+    try {
+      return await $fetch<{ success: boolean, developmentVerificationUrl?: string }>('/api/auth/resend-verification', {
+        method: 'POST'
+      })
+    } catch (err) {
+      console.error(err)
+      return null
+    }
+  }
+
   return {
-    token,
     user,
     setAuth,
     setUser,
-    verifyEmail,
+    requestEmailVerification,
     logout,
     loadAuth,
-    isAuthenticated: () => !!token.value
+    isAuthenticated
   }
 }
